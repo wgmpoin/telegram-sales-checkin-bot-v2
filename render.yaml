@@ -1,11 +1,12 @@
 services:
-  - type: web
+  - type: worker
     name: telegram-bot-gsheet
     env: python
     region: singapore
     plan: free
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn main:app
+    startCommand: python main.py
     envVars:
       - key: BOT_TOKEN
         value: your_bot_token_here
+

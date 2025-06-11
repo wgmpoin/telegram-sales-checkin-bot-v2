@@ -41,7 +41,9 @@ gc = gspread.authorize(credentials)
 
 # Gunakan open_by_key agar tidak butuh scope Google Drive
 SPREADSHEET_ID = "1xx1WzEqrp2LYrg-VTgOPwAhk15DigpBodPM9Bm6pbD4"
+SPREADSHEET_ID = os.getenv("SPREADSHEET_ID")
 worksheet = gc.open_by_key(SPREADSHEET_ID).sheet1
+
 
 # Command handlers
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
