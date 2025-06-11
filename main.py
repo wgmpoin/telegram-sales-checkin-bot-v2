@@ -38,7 +38,10 @@ info = json.loads(decoded_json)
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 credentials = Credentials.from_service_account_info(info, scopes=SCOPES)
 gc = gspread.authorize(credentials)
-worksheet = gc.open("Telegram Check-In Bot").sheet1
+
+# Gunakan open_by_key agar tidak butuh scope Google Drive
+SPREADSHEET_ID = "1xx1WzEqrp2LYrg-VTgOPwAhk15DigpBodPM9Bm6pbD4"
+worksheet = gc.open_by_key(SPREADSHEET_ID).sheet1
 
 # Command handlers
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
