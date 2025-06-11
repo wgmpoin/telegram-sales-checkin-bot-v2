@@ -75,3 +75,4 @@ convert_json.py
 __pycache__/
 *.pyc
 >>>>>>> 79604e0 (Update config files and credentials)
+botsalestelegram-*.json
