@@ -63,16 +63,12 @@ coverage.xml
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Secrets / JSON credentials
+.env
 CREDENTIALS.json
 botsalestelegram-*.json
 encoded.txt
 minified.json
 creds.json
 convert_json.py
-
-=======
-.env
-__pycache__/
-*.pyc
->>>>>>> 79604e0 (Update config files and credentials)
-botsalestelegram-*.json
