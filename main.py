@@ -2,31 +2,37 @@ import os
 import json
 import base64
 import logging
-import sys # Import sys untuk memastikan output logging ke stdout
-import asyncio # Import asyncio untuk running secara asinkron
+import sys
+import asyncio
 
 import gspread
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, ConversationHandler, filters
 from datetime import datetime
+import traceback # Import untuk melacak error lebih detail
 
-# Konfigurasi logging agar selalu muncul di console/log Render
+# Konfigurasi logging
 logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 logger = logging.getLogger(__name__)
 
 logger.info("Script bot starting up...")
 
-# Mengambil environment variables (menggunakan nama yang Anda miliki)
-BOT_TOKEN = os.getenv("BOT_TOKEN") # Menggunakan BOT_TOKEN agar konsisten dengan sebelumnya
+# --- ENVIRONMENT VARIABLES ---
+BOT_TOKEN = os.getenv("BOT_TOKEN")
 SPREADSHEET_ID = os.getenv("SPREADSHEET_ID")
-GOOGLE_SERVICE_ACCOUNT_B64 = os.getenv("GOOGLE_SERVICE_ACCOUNT") # Menggunakan GOOGLE_SERVICE_ACCOUNT
+GOOGLE_SERVICE_ACCOUNT_B64 = os.getenv("GOOGLE_SERVICE_ACCOUNT") 
 
-# Nama tab di Google Sheet
-# Pastikan nama tab untuk data check-in Anda benar (misal: "Sheet1", "Checkin Data")
-TAB_NAME_CHECKIN = "Sheet1" # <--- UBAH INI JIKA NAMA TAB CHECK-IN ANDA BEDA
-AUTHORIZED_USERS_TAB_NAME = "AUTHORIZED_USERS" # Menggunakan nama tab dari kode Anda
+# --- GOOGLE SHEET TAB NAMES ---
+TAB_NAME_CHECKIN = "Sheet1" # <--- UBAH INI JIKA NAMA TAB CHECK-IN UTAMA ANDA BEDA
+AUTHORIZED_USERS_TAB_NAME = "AUTHORIZED_USERS" # <--- UBAH INI JIKA NAMA TAB AUTHORIZED_USERS ANDA BEDA
 
-# Global variables untuk worksheet
+# --- WEBHOOK CONFIGURATION ---
+# Render menyediakan port yang bisa didengarkan bot
+PORT = int(os.environ.get('PORT', '8000')) 
+# Render akan otomatis memberikan URL publik
+WEBHOOK_URL = os.environ.get('WEBHOOK_URL') 
+
+# Global variables for worksheet
 worksheet_checkin_data = None
 worksheet_authorized_users = None
 
@@ -51,8 +57,6 @@ async def initialize_google_sheets():
 
     logger.info("Mencoba mengotorisasi gspread...")
     try:
-        # Menggunakan from_service_account_info sebagai alternatif
-        # Pastikan gspread versi terbaru untuk support ini
         gc = gspread.service_account_from_dict(creds_dict)
         logger.info("Otorisasi gspread berhasil.")
     except Exception as e:
@@ -100,26 +104,24 @@ async def get_authorized_sales_list():
     try:
         all_values = worksheet_authorized_users.get_all_values()
         if not all_values: 
-            logger.warning("Sheet AUTHORIZED_SALES kosong atau tidak dapat diakses.")
+            logger.warning(f"Sheet '{AUTHORIZED_USERS_TAB_NAME}' kosong atau tidak dapat diakses.")
             return []
 
-        # Ambil kolom pertama (index 0) dan strip spasi
         authorized_sales = [row[0].strip() for row in all_values if row and row[0].strip()]
         
-        # Hapus header jika ada. Sesuaikan 'Username' dengan teks header yang sebenarnya di sheet AUTHORIZED_SALES.
-        if 'Username' in authorized_sales: # Ganti 'Username' jika header Anda berbeda
+        # Hapus header jika ada. Sesuaikan 'Username' dengan teks header yang sebenarnya di sheet AUTHORIZED_USERS.
+        if 'Username' in authorized_sales: 
             authorized_sales.remove('Username')
 
         logger.info(f"Daftar sales yang diotorisasi: {authorized_sales}")
         return authorized_sales
     except Exception as e:
-        logger.error(f"Error saat mengambil daftar sales yang diotorisasi dari sheet: {e}")
+        logger.error(f"Error saat mengambil daftar sales yang diotorisasi dari sheet: {e}. Trace: {traceback.format_exc()}")
         return [] 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Menanggapi perintah /start."""
     logger.info(f"[{update.effective_user.username}] Menerima perintah /start")
-    # Poin 1: Menghilangkan "Selamat datang."
     await update.message.reply_text("Gunakan /checkin untuk absen.")
 
 async def checkin_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -139,7 +141,6 @@ async def checkin_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['username'] = username
     await update.message.reply_text("Baik, silakan masukkan **Nama Toko**:", parse_mode='Markdown')
     logger.info(f"[{username}] Meminta nama toko.")
-    # Poin 2: Kembali ke state GET_STORE_NAME
     return GET_STORE_NAME
 
 async def get_store_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -184,7 +185,7 @@ async def receive_location(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     lat_rounded = round(user_location.latitude, 5) 
     lon_rounded = round(user_location.longitude, 5) 
-    Maps_link = f"http://www.google.com/maps/place/{lat_rounded},{lon_rounded}" # Perbaikan link Google Maps
+    Maps_link = f"http://www.google.com/maps/place/{lat_rounded},{lon_rounded}"
     
     now = datetime.now()
     datetime_str = now.strftime("%Y-%m-%d %H:%M:%S") 
@@ -195,7 +196,7 @@ async def receive_location(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return ConversationHandler.END
 
     try:
-        worksheet_checkin_data.append_row([ # Menggunakan worksheet_checkin_data
+        worksheet_checkin_data.append_row([ 
             username,             # Kolom A
             store_name,           # Kolom B
             store_region,         # Kolom C
@@ -214,7 +215,7 @@ async def receive_location(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         logger.info(f"[{username}] Check-in berhasil: {store_name}, {store_region} pada {datetime_str}.")
     except Exception as e:
-        logger.error(f"[{username}] Error saat menulis ke Google Sheet: {e}")
+        logger.error(f"[{username}] Error saat menulis ke Google Sheet: {e}. Trace: {traceback.format_exc()}")
         await update.message.reply_text("Terjadi kesalahan saat menyimpan check-in Anda. Silakan coba lagi nanti.")
     
     return ConversationHandler.END
@@ -227,11 +228,11 @@ async def cancel_checkin(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def unknown(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Menanggapi perintah/pesan yang tidak dikenali."""
-    # Menambahkan pengecekan untuk menghindari log error saat message tidak punya text (misal: lokasi)
     message_text = update.message.text if update.message.text else "Non-text message"
     logger.warning(f"[{update.effective_user.username}] Menerima pesan tidak dikenal: '{message_text}'")
     await update.message.reply_text("Maaf, saya tidak mengerti perintah itu.")
 
+# Main function where the bot runs
 async def main():
     logger.info("Fungsi main() dimulai.")
     if not BOT_TOKEN:
@@ -240,15 +241,15 @@ async def main():
     if not SPREADSHEET_ID:
         logger.critical("SPREADSHEET_ID belum diatur di environment.")
         raise ValueError("SPREADSHEET_ID harus diatur di environment")
-    if not GOOGLE_SERVICE_ACCOUNT_B64: # Menambahkan validasi untuk kredensial GSA
+    if not GOOGLE_SERVICE_ACCOUNT_B64: 
         logger.critical("GOOGLE_SERVICE_ACCOUNT belum diatur di environment.")
         raise ValueError("GOOGLE_SERVICE_ACCOUNT harus diatur di environment")
     
     try:
         await initialize_google_sheets()
     except Exception as e:
-        logger.critical(f"Gagal menginisialisasi Google Sheets. Bot tidak dapat memulai: {e}")
-        return # Keluar dari fungsi main jika GSheet gagal
+        logger.critical(f"Gagal menginisialisasi Google Sheets. Bot tidak dapat memulai: {e}. Trace: {traceback.format_exc()}")
+        sys.exit(1) # Keluar dari aplikasi jika GSheet gagal
 
     logger.info("Membangun ApplicationBuilder...")
     application = ApplicationBuilder().token(BOT_TOKEN).build()
@@ -269,16 +270,26 @@ async def main():
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, unknown)) 
     application.add_handler(MessageHandler(filters.ALL, unknown)) 
 
-    logger.info("Bot dimulai dan mendengarkan pembaruan... (run_polling)")
-    await application.run_polling(poll_interval=1.0, timeout=10)
-    logger.info("application.run_polling() selesai.")
+    # --- WEBHOOK IMPLEMENTATION ---
+    if WEBHOOK_URL:
+        logger.info(f"Mengatur webhook ke: {WEBHOOK_URL} pada port: {PORT}")
+        await application.updater.start_webhook(listen="0.0.0.0", port=PORT, url_path="")
+        await application.bot.set_webhook(url=WEBHOOK_URL)
+        logger.info("Webhook telah diatur dan bot mendengarkan.")
+    else:
+        logger.warning("WEBHOOK_URL tidak diatur. Bot akan berjalan dalam mode polling.")
+        logger.info("Bot dimulai dan mendengarkan pembaruan... (run_polling)")
+        await application.run_polling(poll_interval=1.0, timeout=10) # Tetap ada sebagai fallback/lokal
+    # --- END WEBHOOK IMPLEMENTATION ---
+    
+    logger.info("Application loop selesai.") # Perbaikan log
 
 if __name__ == "__main__":
-    logger.info("Memulai asyncio event loop.")
+    logger.info("Memulai asyncio event loop utama.")
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
         logger.info("Bot dihentikan secara manual (KeyboardInterrupt).")
     except Exception as e:
-        logger.critical(f"Terjadi error fatal saat menjalankan bot: {e}", exc_info=True)
-    logger.info("Asyncio event loop selesai.")
+        logger.critical(f"Terjadi error fatal saat menjalankan bot: {e}. Trace: {traceback.format_exc()}", exc_info=False) # Hapus exc_info=True untuk mencegah log duplikat
+    logger.info("Asyncio event loop utama selesai.")
