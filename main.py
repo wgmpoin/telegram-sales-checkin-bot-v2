@@ -254,6 +254,43 @@ async def main():
     logger.info("Membangun ApplicationBuilder...")
     application = ApplicationBuilder().token(BOT_TOKEN).build()
     logger.info("ApplicationBuilder berhasil dibangun.")
+    # ... (bagian kode sebelumnya) ...
+
+async def main():
+    logger.info("Fungsi main() dimulai.")
+    # ... (pemeriksaan environment variables) ...
+
+    try:
+        await initialize_google_sheets()
+    except Exception as e:
+        logger.critical(f"Gagal menginisialisasi Google Sheets. Bot tidak dapat memulai: {e}. Trace: {traceback.format_exc()}")
+        sys.exit(1)
+
+    logger.info("Membangun ApplicationBuilder...")
+    application = ApplicationBuilder().token(BOT_TOKEN).build()
+    logger.info("ApplicationBuilder berhasil dibangun.")
+
+    # --- TAMBAHKAN BARIS INI DI SINI ---
+    await application.initialize()
+    logger.info("Application berhasil diinisialisasi.")
+    # ------------------------------------
+
+    checkin_conv_handler = ConversationHandler(
+        entry_points=[CommandHandler("checkin", checkin_start)],
+        states={
+            GET_STORE_NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_store_name)],
+            GET_STORE_REGION: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_store_region)],
+            GET_LOCATION: [MessageHandler(filters.LOCATION, receive_location)],
+        },
+        fallbacks=[CommandHandler("cancel", cancel_checkin), MessageHandler(filters.TEXT & ~filters.COMMAND, unknown)],
+    )
+
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(checkin_conv_handler)
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, unknown))
+    application.add_handler(MessageHandler(filters.ALL, unknown))
+
+    # ... (bagian webhook/polling) ...
 
     checkin_conv_handler = ConversationHandler(
         entry_points=[CommandHandler("checkin", checkin_start)],
