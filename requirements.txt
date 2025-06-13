@@ -1,4 +1,4 @@
-python-telegram-bot[webhooks]==X.Y.Z  # (Ganti X.Y.Z dengan versi yang sama atau versi terbaru yang Anda gunakan)
+python-telegram-bot[webhooks]==22.1
 gspread==5.12.0
 google-auth==2.29.0
 httpx==0.26.0
