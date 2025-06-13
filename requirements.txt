@@ -1,5 +1,5 @@
+Flask==3.0.3  # Pastikan Flask ditambahkan
 python-telegram-bot[webhooks]==22.1
-gspread==5.12.0
-google-auth==2.29.0
 httpx
-python-dotenv==1.0.1
+gspread
+# ... dependensi Anda lainnya
