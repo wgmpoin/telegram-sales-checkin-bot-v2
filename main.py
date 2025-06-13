@@ -24,7 +24,7 @@ GOOGLE_SERVICE_ACCOUNT_B64 = os.getenv("GOOGLE_SERVICE_ACCOUNT") # Menggunakan G
 # Nama tab di Google Sheet
 # Pastikan nama tab untuk data check-in Anda benar (misal: "Sheet1", "Checkin Data")
 TAB_NAME_CHECKIN = "Sheet1" # <--- UBAH INI JIKA NAMA TAB CHECK-IN ANDA BEDA
-AUTHORIZED_USERS_TAB_NAME = "AUTHORIZED_SALES" # Menggunakan nama tab dari kode Anda
+AUTHORIZED_USERS_TAB_NAME = "AUTHORIZED_USERS" # Menggunakan nama tab dari kode Anda
 
 # Global variables untuk worksheet
 worksheet_checkin_data = None
