@@ -7,6 +7,8 @@ services:
     buildCommand: pip install -r requirements.txt
     startCommand: python main.py
     envVars:
+      - key: RENDER_EXTERNAL_URL
+        value: telegram-sales-bot-final.onrender.com
       - key: BOT_TOKEN
         value: your_bot_token_here # Ganti dengan Bot Token Telegram kamu
       - key: SPREADSHEET_ID
